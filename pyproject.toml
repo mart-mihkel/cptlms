@@ -1,13 +1,13 @@
 [project]
-name = "msc"
+name = "prefix-tuning-lms"
 version = "0.1.0"
-description = "Add your description here"
+description = "Prefix tuning application in language models"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "transformers>=4.57.1",
     "datasets>=4.3.0",
-    "marimo>=0.17.0",
+    "marimo>=0.17.2",
     "polars>=1.34.0",
     "torch>=2.9.0",
     "peft>=0.17.1",
