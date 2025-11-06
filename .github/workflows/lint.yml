@@ -1,0 +1,21 @@
+name: Linter
+
+on: [push, pull_request]
+
+jobs:
+  linter:
+    name: Linter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Format
+        run: uvx ruff format --check
+
+      - name: Lint
+        run: uvx ruff check
