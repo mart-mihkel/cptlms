@@ -1,10 +1,10 @@
-name: Linter
+name: Check
 
 on: [push, pull_request]
 
 jobs:
-  linter:
-    name: Linter
+  check:
+    name: Check
     runs-on: ubuntu-latest
 
     steps:
@@ -19,3 +19,6 @@ jobs:
 
       - name: Lint
         run: uvx ruff check
+
+      - name: Typecheck
+        run: uvx ty check
