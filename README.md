@@ -1,8 +1,4 @@
-## Tuning
-
-```bash
-python cli.py --help
-```
+# Continuous Prompt Tuning in Language Models
 
 ## Development
 
@@ -15,3 +11,9 @@ Use [uv](https://docs.astral.sh/uv/) for project management and
 - `make lint` - run linter
 - `make check` - run type checker
 - `make watch` - typst watch thesis
+
+## Usage
+
+```bash
+uv run cli.py --help
+```
