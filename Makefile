@@ -27,7 +27,7 @@ types: sync
 	uv run ty check
 
 .PHONY: check
-check: sync format-check lint types
+check: test format-check lint types
 
 .PHONY: typst
 typst:
