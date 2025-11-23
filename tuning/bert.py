@@ -1,8 +1,7 @@
 from typing import cast
 
 import torch
-from datasets import DatasetDict
-from peft import PeftModel, PromptTuningConfig, TaskType, get_peft_model
+from datasets import DatasetDict, load_dataset
 from transformers import (
     BertForMultipleChoice,
     BertTokenizerFast,
@@ -11,7 +10,7 @@ from transformers import (
     DataCollatorForMultipleChoice,
 )
 
-from .util.datasets import prep_swag
+from .util.datasets import tokenize_swag
 
 
 def main(
@@ -19,47 +18,27 @@ def main(
     output_dir: str,
     num_epochs: int,
     batch_size: int,
-    prompt_tune: bool,
-    num_virtual_tokens: int,
 ):
     tokenizer = BertTokenizerFast.from_pretrained(pretrained_model_name)
     tokenizer = cast(BertTokenizerFast, tokenizer)
 
-    dataset = prep_swag(tokenizer)
+    swag = load_dataset("swag", "regular")
+    swag = cast(DatasetDict, swag)
+    swag = tokenize_swag(swag, tokenizer)
 
-    model = BertForMultipleChoice.from_pretrained(pretrained_model_name)
+    bert = BertForMultipleChoice.from_pretrained(pretrained_model_name)
 
-    if prompt_tune:
-        model = _get_peft_bert(model, pretrained_model_name, num_virtual_tokens)
-
-    _tune(
-        model,
+    _train(
+        bert,
         tokenizer,
-        dataset,
+        swag,
         output_dir,
         num_epochs,
         batch_size,
     )
 
 
-def _get_peft_bert(
-    bert: BertForMultipleChoice,
-    pretrained_tokenizer_name: str,
-    num_virtual_tokens: int,
-) -> PeftModel:
-    cfg = PromptTuningConfig(
-        task_type=TaskType.SEQ_CLS,
-        num_virtual_tokens=num_virtual_tokens,
-        tokenizer_name_or_path=pretrained_tokenizer_name,
-    )
-
-    peft_bert = get_peft_model(bert, cfg)
-    peft_bert = cast(PeftModel, peft_bert)
-
-    return peft_bert
-
-
-def _tune(
+def _train(
     model: torch.nn.Module,
     tokenizer: BertTokenizerFast,
     dataset: DatasetDict,
