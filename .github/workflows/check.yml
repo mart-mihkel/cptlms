@@ -1,13 +1,27 @@
-name: Check
+name: check
 
 on: [push, pull_request]
 
 jobs:
   check:
-    name: Check
+    name: check
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
-      - run: make check
+
+      - name: sync
+        run: uv sync --locked
+
+      - name: test
+        run: uv run pytest
+
+      - name: typecheck
+        run: uv run ty check
+
+      - name: linter
+        run: uv run ruff check
+
+      - name: format
+        run: uv run ruff format --check

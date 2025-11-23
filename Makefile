@@ -1,38 +1,32 @@
+DOCUMENT_VIEWER = "zathura"
+
 .PHONY: sync
 sync:
 	uv sync
 
 .PHONY: marimo
-marimo: sync
+marimo:
 	uv run marimo edit
 
 .PHONY: test
-test: sync
+test:
 	uv run pytest
 
-.PHONY: format
-format: sync
-	uv run ruff format
-
-.PHONY: format-check
-format-check: sync
-	uv run ruff format --check
-
-.PHONY: lint
-lint: sync
-	uv run ruff check
-
 .PHONY: types
-types: sync
+types:
 	uv run ty check
 
+.PHONY: lint
+lint:
+	uv run ruff check
+
+.PHONY: format
+format:
+	uv run ruff format
+
 .PHONY: check
-check: test format-check lint types
+check: test types lint format
 
 .PHONY: typst
 typst:
-	typst compile typesetting/main.typ
-
-.PHONY: typst-watch
-typst-watch:
-	typst watch typesetting/main.typ --open zathura
+	typst watch typesetting/main.typ --open $(DOCUMENT_VIEWER)
