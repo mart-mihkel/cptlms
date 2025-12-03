@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class TelemetryRecord(TypedDict):
+    epoch: int
     train_loss: float
     val_f1: float
     val_exact_match: float
@@ -89,10 +90,10 @@ class Trainer:
         self.model.train()
         for epoch in range(1, self.epochs + 1):
             logger.info("epoch %d/%d", epoch, self.epochs)
-            self._epoch()
+            self._epoch(epoch=epoch)
             self._save_checkpoint(epoch=epoch)
 
-    def _epoch(self):
+    def _epoch(self, epoch: int):
         train_loss = 0
 
         for batch in tqdm(self.train_loader, desc="train"):
@@ -115,6 +116,7 @@ class Trainer:
 
         self.telemetry.append(
             {
+                "epoch": epoch,
                 "train_loss": avg_train_loss,
                 "val_exact_match": metrics["exact_match"],
                 "val_f1": metrics["f1"],
