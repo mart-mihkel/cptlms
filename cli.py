@@ -21,34 +21,23 @@ def fine_tune(
     from transformers import (
         ModernBertForQuestionAnswering,
         PreTrainedTokenizerFast,
-        default_data_collator,
     )
 
-    from cptlms.squad import SQuAD
+    from cptlms.squad import Squad
     from cptlms.trainer import Trainer
 
     torch.set_float32_matmul_precision("high")
 
-    out_path = Path(out_dir)
-
     tokenizer = PreTrainedTokenizerFast.from_pretrained(pretrained_model)
     model = ModernBertForQuestionAnswering.from_pretrained(pretrained_model)
-
-    squad = SQuAD(tokenizer)
-
-    def _drop_offset_mappings_collator(batch):
-        for item in batch:
-            item.pop("offset_mapping", None)
-
-        return default_data_collator(batch)
-
+    squad = Squad(tokenizer)
     trainer = Trainer(
         model=model,
         epochs=epochs,
         qa_dataset=squad,
-        collate_fn=_drop_offset_mappings_collator,
+        collate_fn=Squad.default_collate_fn,
         batch_size=batch_size,
-        out_dir=out_path,
+        out_dir=Path(out_dir),
     )
 
     trainer.train()

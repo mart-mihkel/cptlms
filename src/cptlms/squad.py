@@ -10,30 +10,45 @@ from datasets.load import load_dataset
 from numpy.typing import NDArray
 from tqdm.auto import tqdm
 from transformers import PreTrainedTokenizerFast
+from transformers.data.data_collator import default_data_collator
 
 logger = logging.getLogger(__name__)
 
 type OffsetMapping = list[list[tuple[int, int]]]
 
 
-class SQuADMetrics(TypedDict):
+class SquadMetrics(TypedDict):
     exact_match: float
     f1: float
 
 
-class SQuADBatchAnswer(TypedDict):
+class SquadRawAnswer(TypedDict):
     answer_start: tuple[int]
     text: tuple[str]
 
 
-class SQuADBatch(TypedDict):
+class SquadBatchRaw(TypedDict):
     id: list[int]
     question: list[str]
     context: list[str]
-    answers: list[SQuADBatchAnswer]
+    answers: list[SquadRawAnswer]
 
 
-class SQuAD:
+class SquadTrainRecord(TypedDict):
+    input_ids: list[int]
+    attention_mask: list[int]
+    start_positions: int
+    end_positions: int
+
+
+class SquadValRecord(TypedDict):
+    input_ids: list[int]
+    attention_mask: list[int]
+    offset_mpping: list[None | tuple[int, int]]
+    example_id: str
+
+
+class Squad:
     def __init__(
         self,
         tokenizer: PreTrainedTokenizerFast,
@@ -73,7 +88,7 @@ class SQuAD:
 
         return train, val
 
-    def _preprocess_train_batch(self, examples: SQuADBatch):
+    def _preprocess_train_batch(self, examples: SquadBatchRaw):
         questions = [q.strip() for q in examples["question"]]
         inputs = self.tokenizer(
             questions,
@@ -110,7 +125,7 @@ class SQuAD:
 
         return inputs
 
-    def _preprocess_val_batch(self, examples: SQuADBatch):
+    def _preprocess_val_batch(self, examples: SquadBatchRaw):
         questions = [q.strip() for q in examples["question"]]
         inputs = self.tokenizer(
             questions,
@@ -179,7 +194,7 @@ class SQuAD:
         self,
         start_logits: NDArray[np.float64],
         end_logits: NDArray[np.float64],
-    ) -> SQuADMetrics:
+    ) -> SquadMetrics:
         predicted_answers = self._postprocess_predictions(
             start_logits=start_logits,
             end_logits=end_logits,
@@ -194,7 +209,7 @@ class SQuAD:
             references=theoretical_answers,
         )
 
-        return cast(SQuADMetrics, metrics)
+        return cast(SquadMetrics, metrics)
 
     def _postprocess_predictions(
         self,
@@ -260,3 +275,11 @@ class SQuAD:
                     answers.append({"text": text, "logit_score": score})
 
         return answers
+
+    @staticmethod
+    def default_collate_fn(batch: list[SquadTrainRecord | SquadValRecord]):
+        for item in batch:
+            item.pop("offset_mapping", None)
+            item.pop("example_id", None)
+
+        return default_data_collator(batch)
