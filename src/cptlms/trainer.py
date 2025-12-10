@@ -20,7 +20,7 @@ from cptlms.squad import Squad, SquadMetrics
 logger = logging.getLogger("cptlms")
 
 
-class TelemetryRecord(TypedDict):
+class Telemetry(TypedDict):
     epoch: int
     train_loss: float
     val_f1: float
@@ -42,7 +42,7 @@ class Trainer:
         self.batch_size = batch_size
         self.dataset = qa_dataset
         self.out_dir = out_dir
-        self.telemetry: list[TelemetryRecord] = []
+        self.telemetry: list[Telemetry] = []
 
         model = model.to(self.device)
 
@@ -96,42 +96,46 @@ class Trainer:
             self._save_telemetry()
 
     def _epoch(self, epoch: int):
-        train_loss = 0
+        train_loss = self._train()
+        val_metrics = self._eval()
 
-        for batch in tqdm(self.train_loader, desc="train"):
+        logger.info("training loss:   %.4f", train_loss)
+        logger.info("val exact match: %.4f", val_metrics["exact_match"])
+        logger.info("val f1:          %.4f", val_metrics["f1"])
+
+        self.telemetry.append(
+            {
+                "epoch": epoch,
+                "train_loss": train_loss,
+                "val_exact_match": val_metrics["exact_match"],
+                "val_f1": val_metrics["f1"],
+            }
+        )
+
+    def _train(self) -> float:
+        self.model.train()
+
+        train_loss = 0
+        pbar = tqdm(self.train_loader, desc="Train")
+        for i, batch in enumerate(pbar):
             outputs = self.model(**batch)
             loss = outputs.loss
             self.accelerator.backward(loss)
-
             self.optimizer.step()
             self.scheduler.step()
             self.optimizer.zero_grad()
 
             train_loss += loss.item()
+            pbar.set_description(f"Train loss {train_loss / (i + 1):.4f}")
 
-        avg_train_loss = train_loss / len(self.train_loader)
-        logger.info("training loss: %.4f", avg_train_loss)
-
-        metrics = self._eval()
-        logger.info("exact match: %.4f", metrics["exact_match"])
-        logger.info("f1: %.4f", metrics["f1"])
-
-        self.telemetry.append(
-            {
-                "epoch": epoch,
-                "train_loss": avg_train_loss,
-                "val_exact_match": metrics["exact_match"],
-                "val_f1": metrics["f1"],
-            }
-        )
+        return train_loss / len(self.train_loader)
 
     def _eval(self) -> SquadMetrics:
         self.model.eval()
 
         start_logits = []
         end_logits = []
-
-        for batch in tqdm(self.val_loader, desc="eval"):
+        for batch in tqdm(self.val_loader, desc="Eval"):
             with torch.no_grad():
                 outputs: QuestionAnsweringModelOutput = self.model(**batch)
 

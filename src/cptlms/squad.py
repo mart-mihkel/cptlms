@@ -219,7 +219,7 @@ class Squad:
         end_logits: NDArray[np.float64],
     ) -> list[dict[str, str | int]]:
         predicted_answers = []
-        for example in tqdm(self.val, desc="postprocess"):
+        for example in tqdm(self.val, desc="Postprocess"):
             example_id = example["id"]
             answers = self._extract_answers(
                 start_logits=start_logits,
