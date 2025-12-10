@@ -11,22 +11,22 @@ marimo:
 
 .PHONY: test
 test:
-	uv run pytest
+	@uv run pytest
 
 .PHONY: types
 types:
-	uv run ty check
+	@uv run ty check
 
 .PHONY: lint
 lint:
-	uv run ruff check
+	@uv run ruff check --fix
 
 .PHONY: format
 format:
-	uv run ruff format
+	@uv run ruff format
 
 .PHONY: check
-check: format lint types test
+check: format lint test
 
 .PHONY: typst
 typst:
@@ -34,4 +34,4 @@ typst:
 
 .PHONY: rsync
 rsync:
-	rsync -r --exclude='.venv' . $(REMOTE):git/cptlms
+	rsync -rv --exclude-from '.gitignore' . $(REMOTE):git/cptlms
