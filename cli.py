@@ -39,7 +39,7 @@ def fine_tune_qa(
     epochs: int = 20,
     batch_size: int = 32,
     train_split: str = "train",
-    eval_split: str = "validation",
+    val_split: str = "validation",
 ):
     from pathlib import Path
 
@@ -54,7 +54,7 @@ def fine_tune_qa(
         epochs=epochs,
         out_dir=out_dir,
         batch_size=batch_size,
-        eval_split=eval_split,
+        eval_split=val_split,
         train_split=train_split,
         pretrained_model=pretrained_model,
     )
@@ -62,7 +62,7 @@ def fine_tune_qa(
     torch.set_float32_matmul_precision("high")
 
     tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
-    squad = Squad(tokenizer, train_split=train_split, eval_split=eval_split)
+    squad = Squad(tokenizer, train_split=train_split, val_split=val_split)
 
     model = AutoModelForQuestionAnswering.from_pretrained(pretrained_model)
 
@@ -94,7 +94,7 @@ def p_tune_qa(
     encoder_hidden_size: int = 128,
     encoder_reparam_type: Literal["emb", "mlp", "lstm"] = "mlp",
     train_split: str = "train",
-    eval_split: str = "validation",
+    val_split: str = "validation",
 ):
     from pathlib import Path
 
@@ -110,7 +110,7 @@ def p_tune_qa(
         epochs=epochs,
         out_dir=out_dir,
         batch_size=batch_size,
-        eval_split=eval_split,
+        eval_split=val_split,
         train_split=train_split,
         pretrained_model=pretrained_model,
         train_new_layers=train_new_layers,
@@ -121,7 +121,7 @@ def p_tune_qa(
     torch.set_float32_matmul_precision("high")
 
     tokenizer = AutoTokenizer.from_pretrained(pretrained_model)
-    squad = Squad(tokenizer, train_split=train_split, eval_split=eval_split)
+    squad = Squad(tokenizer, train_split=train_split, val_split=val_split)
 
     base_bert = AutoModelForQuestionAnswering.from_pretrained(pretrained_model)
     pt_bert = PTuningBertQuestionAnswering(

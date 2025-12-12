@@ -7,7 +7,7 @@ sync:
 
 .PHONY: marimo
 marimo:
-	uv run marimo edit
+	uv run marimo edit notebooks
 
 .PHONY: test
 test:

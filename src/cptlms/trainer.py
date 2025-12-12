@@ -52,8 +52,8 @@ class Trainer:
             collate_fn=collate_fn,
         )
 
-        eval_loader = DataLoader(
-            qa_dataset.eval_tok.with_format("torch", device=self.device),
+        val_loader = DataLoader(
+            qa_dataset.val_tok.with_format("torch", device=self.device),
             batch_size=batch_size,
             collate_fn=collate_fn,
         )
@@ -65,19 +65,19 @@ class Trainer:
         )
 
         self.accelerator = Accelerator(mixed_precision="fp16")
-        self.model, self.optimizer, self.train_loader, self.eval_loader = (
+        self.model, self.optimizer, self.train_loader, self.val_loader = (
             self.accelerator.prepare(
                 model,
                 optimizer,
                 train_loader,
-                eval_loader,
+                val_loader,
             )
         )
 
         self.model: Module
         self.optimizer: AdamW
         self.train_loader: DataLoader
-        self.eval_loader: DataLoader
+        self.val_loader: DataLoader
 
         self.scheduler: LambdaLR = get_scheduler(
             "linear",
@@ -134,7 +134,7 @@ class Trainer:
 
         start_logits = []
         end_logits = []
-        for batch in tqdm(self.eval_loader, desc="Eval"):
+        for batch in tqdm(self.val_loader, desc="Eval"):
             with torch.no_grad():
                 outputs: QuestionAnsweringModelOutput = self.model(**batch)
 
@@ -150,7 +150,7 @@ class Trainer:
         start_logits = torch.cat(start_logits)
         end_logits = torch.cat(end_logits)
 
-        n = len(self.eval_loader) * self.batch_size
+        n = len(self.val_loader) * self.batch_size
         start_logits = start_logits[:n]
         end_logits = end_logits[:n]
 
