@@ -5,7 +5,6 @@ from typing import Annotated, TypedDict, cast
 
 import evaluate
 from datasets.arrow_dataset import Dataset
-from datasets.dataset_dict import DatasetDict
 from datasets.load import load_dataset
 from torch import Tensor
 from tqdm.auto import tqdm
@@ -53,24 +52,27 @@ class Squad:
     def __init__(
         self,
         tokenizer: PreTrainedTokenizerFast,
-        max_len=384,
-        stride=128,
+        max_len: int = 384,
+        stride: int = 128,
+        train_split: str = "train",
+        eval_split: str = "validation",
     ):
         logger.info("init squad")
 
-        data = load_dataset("squad")
-        assert isinstance(data, DatasetDict)
+        train, eval = load_dataset("squad", split=[train_split, eval_split])
+        assert isinstance(train, Dataset)
+        assert isinstance(eval, Dataset)
+
+        self.train = train
+        self.eval = eval
 
         self.metric = evaluate.loading.load("squad")
-
-        self.train = data["train"]
-        self.val = data["validation"]
 
         self.max_len = max_len
         self.stride = stride
         self.tokenizer = tokenizer
 
-        self.train_tok, self.val_tok = self._tokenize()
+        self.train_tok, self.eval_tok = self._tokenize()
 
     def _tokenize(self) -> tuple[Dataset, Dataset]:
         logger.info("tokenize squad")
@@ -81,13 +83,13 @@ class Squad:
             remove_columns=self.train.column_names,
         )
 
-        val = self.val.map(
-            self._preprocess_val_batch,
+        eval = self.eval.map(
+            self._preprocess_eval_batch,
             batched=True,
-            remove_columns=self.val.column_names,
+            remove_columns=self.eval.column_names,
         )
 
-        return train, val
+        return train, eval
 
     def _preprocess_train_batch(self, examples: SquadBatchRaw):
         questions = [q.strip() for q in examples["question"]]
@@ -126,7 +128,7 @@ class Squad:
 
         return inputs
 
-    def _preprocess_val_batch(self, examples: SquadBatchRaw):
+    def _preprocess_eval_batch(self, examples: SquadBatchRaw):
         questions = [q.strip() for q in examples["question"]]
         inputs = self.tokenizer(
             questions,
@@ -202,10 +204,10 @@ class Squad:
         )
 
         theoretical_answers = [
-            {"id": ex["id"], "answers": ex["answers"]} for ex in self.val
+            {"id": ex["id"], "answers": ex["answers"]} for ex in self.eval
         ]
 
-        metrics = self.metric.compute(  # type: ignore[missing-argument]  # false positive
+        metrics = self.metric.compute(  # type: ignore[missing-argument]
             predictions=predicted_answers,
             references=theoretical_answers,
         )
@@ -218,14 +220,14 @@ class Squad:
         end_logits: Annotated[Tensor, "batch seq"],
     ) -> list[dict[str, str | int]]:
         predicted_answers = []
-        for example in tqdm(self.val, desc="Postprocess"):
+        for example in tqdm(self.eval, desc="Postprocess"):
             example_id = example["id"]
             answers = self._extract_answers(
                 start_logits=start_logits,
                 end_logits=end_logits,
                 context=example["context"],
                 example_features=self._example_to_features[example_id],
-                offset_mapping=self.val_tok["offset_mapping"],
+                offset_mapping=self.eval_tok["offset_mapping"],
             )
 
             if len(answers) > 0:
@@ -241,7 +243,7 @@ class Squad:
     @cached_property
     def _example_to_features(self) -> dict[int, list[int]]:
         example_to_features: dict[int, list[int]] = defaultdict(list)
-        for idx, feature in enumerate(self.val_tok):
+        for idx, feature in enumerate(self.eval_tok):
             example_to_features[feature["example_id"]].append(idx)
 
         return example_to_features
