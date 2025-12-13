@@ -46,7 +46,7 @@ def fine_tune_qa(
     import torch
     from transformers import AutoModelForQuestionAnswering, AutoTokenizer
 
-    from cptlms.squad import Squad
+    from cptlms.squad import Squad, squad_collate_fn
     from cptlms.trainer import Trainer
 
     _setup_logging(out_dir=out_dir)
@@ -76,7 +76,7 @@ def fine_tune_qa(
         epochs=epochs,
         qa_dataset=squad,
         batch_size=batch_size,
-        collate_fn=Squad.collate_fn,
+        collate_fn=squad_collate_fn,
         out_dir=Path(out_dir),
     )
 
@@ -102,7 +102,7 @@ def p_tune_qa(
     from transformers import AutoModelForQuestionAnswering, AutoTokenizer
 
     from cptlms.ptuning import PTuningBertQuestionAnswering
-    from cptlms.squad import Squad
+    from cptlms.squad import Squad, squad_collate_fn
     from cptlms.trainer import Trainer
 
     _setup_logging(out_dir=out_dir)
@@ -142,7 +142,7 @@ def p_tune_qa(
         epochs=epochs,
         qa_dataset=squad,
         batch_size=batch_size,
-        collate_fn=Squad.collate_fn,
+        collate_fn=squad_collate_fn,
         out_dir=Path(out_dir),
     )
 

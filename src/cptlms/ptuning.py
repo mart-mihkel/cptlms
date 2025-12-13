@@ -87,7 +87,7 @@ class PTuningBertQuestionAnswering(Module):
         self.num_virtual_tokens = num_virtual_tokens  # type: ignore[unresolved-attribute]
 
         self.bert = bert
-        self._freeze_params(self.bert, train_new_layers)
+        _freeze_params(self.bert, train_new_layers)
 
         bert_embedding = bert.get_input_embeddings()
         assert isinstance(bert_embedding, Embedding)
@@ -144,15 +144,15 @@ class PTuningBertQuestionAnswering(Module):
 
         return out
 
-    @staticmethod
-    def _freeze_params(
-        bert: BertForQuestionAnswering,
-        train_new_layers: bool = True,
-    ):
-        logger.info("freeze bert parameters")
-        for name, param in bert.named_parameters():
-            if train_new_layers and "qa_outputs" in name:
-                logger.info("skip %s", name)
-                continue
 
-            param.requires_grad = False
+def _freeze_params(
+    bert: BertForQuestionAnswering,
+    train_new_layers: bool = True,
+):
+    logger.info("freeze bert parameters")
+    for name, param in bert.named_parameters():
+        if train_new_layers and "qa_outputs" in name:
+            logger.info("skip %s", name)
+            continue
+
+        param.requires_grad = False
