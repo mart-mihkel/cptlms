@@ -1,9 +1,10 @@
 import logging
+import os
+from pathlib import Path
 from typing import Literal, TypedDict
 
 from datasets.arrow_dataset import Dataset
-from datasets.load import load_dataset
-from datasets.utils.info_utils import VerificationMode
+from datasets.load import load_from_disk
 from transformers import BatchEncoding
 from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
 
@@ -57,6 +58,74 @@ type MultinerdTag = Literal[
     "I-VEHI",
 ]
 
+MULTINERD_TAG2ID: dict[MultinerdTag, int] = {
+    "O": 0,
+    "B-PER": 1,
+    "I-PER": 2,
+    "B-ORG": 3,
+    "I-ORG": 4,
+    "B-LOC": 5,
+    "I-LOC": 6,
+    "B-ANIM": 7,
+    "I-ANIM": 8,
+    "B-BIO": 9,
+    "I-BIO": 10,
+    "B-CEL": 11,
+    "I-CEL": 12,
+    "B-DIS": 13,
+    "I-DIS": 14,
+    "B-EVE": 15,
+    "I-EVE": 16,
+    "B-FOOD": 17,
+    "I-FOOD": 18,
+    "B-INST": 19,
+    "I-INST": 20,
+    "B-MEDIA": 21,
+    "I-MEDIA": 22,
+    "B-MYTH": 23,
+    "I-MYTH": 24,
+    "B-PLANT": 25,
+    "I-PLANT": 26,
+    "B-TIME": 27,
+    "I-TIME": 28,
+    "B-VEHI": 29,
+    "I-VEHI": 30,
+}
+
+MULTINERD_ID2TAG: dict[int, MultinerdTag] = {
+    0: "O",
+    1: "B-PER",
+    2: "I-PER",
+    3: "B-ORG",
+    4: "I-ORG",
+    5: "B-LOC",
+    6: "I-LOC",
+    7: "B-ANIM",
+    8: "I-ANIM",
+    9: "B-BIO",
+    10: "I-BIO",
+    11: "B-CEL",
+    12: "I-CEL",
+    13: "B-DIS",
+    14: "I-DIS",
+    15: "B-EVE",
+    16: "I-EVE",
+    17: "B-FOOD",
+    18: "I-FOOD",
+    19: "B-INST",
+    20: "I-INST",
+    21: "B-MEDIA",
+    22: "I-MEDIA",
+    23: "B-MYTH",
+    24: "I-MYTH",
+    25: "B-PLANT",
+    26: "I-PLANT",
+    27: "B-TIME",
+    28: "I-TIME",
+    29: "B-VEHI",
+    30: "I-VEHI",
+}
+
 
 class MultinerdBatch(TypedDict):
     tokens: list[list[str]]
@@ -64,43 +133,11 @@ class MultinerdBatch(TypedDict):
     lang: list[MultinerdLang]
 
 
-class Multinerd:
-    def __init__(
-        self,
-        tokenizer: PreTrainedTokenizerFast,
-        train_split: str = "train",
-        val_split: str = "validation",
-        test_split: str = "test",
-        english_only: bool = True,
-    ) -> None:
-        logger.info("load multinerd")
-        train, val, test = load_dataset(
-            "Babelscape/multinerd",
-            split=[train_split, val_split, test_split],
-            verification_mode=VerificationMode.NO_CHECKS,
-        )
-
-        assert isinstance(train, Dataset)
-        assert isinstance(val, Dataset)
-        assert isinstance(test, Dataset)
-
-        self.train = train
-        self.val = val
-        self.test = test
-
-        if english_only:
-            logger.info("filter multinerd english")
-            self.train = train.filter(_filter_en, batched=True)
-            self.val = val.filter(_filter_en, batched=True)
-            self.test = test.filter(_filter_en, batched=True)
-
-        logger.info("tokenize multinerd")
-        self.tokenizer = tokenizer
-        self.train_tokenized = self.train.map(self._tokenize, batched=True)
-        self.val_tokenized = self.val.map(self._tokenize, batched=True)
-        self.test_tokenized = self.test.map(self._tokenize, batched=True)
-
-    def _tokenize(self, batch: MultinerdBatch) -> BatchEncoding:
+def tokenize_multinerd(
+    tokenizer: PreTrainedTokenizerFast,
+    data: Dataset,
+) -> Dataset:
+    def _tokenize(batch: MultinerdBatch) -> BatchEncoding:
         """
         Args:
             batch (MultinerdBatch)
@@ -108,10 +145,10 @@ class Multinerd:
         Returns:
             BatchEncoding:
                 input_ids: list[list[int]]
-                attention_map: list[list[int]]
+                attention_mask: list[list[int]]
                 labels: list[list[int]]
         """
-        tokenized = self.tokenizer(
+        tokenized = tokenizer(
             batch["tokens"],
             truncation=True,
             is_split_into_words=True,
@@ -125,6 +162,95 @@ class Multinerd:
 
         tokenized["labels"] = labels
         return tokenized
+
+    return data.map(_tokenize, batched=True, remove_columns=data.column_names)
+
+
+def tokenize_multinerd_prompted(
+    tokenizer: PreTrainedTokenizerFast,
+    data: Dataset,
+    cache_path: Path | None = None,
+    force_retokenize: bool = False,
+) -> Dataset:
+    if not force_retokenize and cache_path is not None and cache_path.exists():
+        logger.info("load tokenized multinerd from %s", cache_path)
+        data_cached = load_from_disk(cache_path)
+        assert isinstance(data_cached, Dataset)
+        return data_cached
+
+    sep_token = tokenizer.special_tokens_map["sep_token"]
+    cls_token = tokenizer.special_tokens_map["cls_token"]
+
+    assert isinstance(cls_token, str), "Expected one classification token"
+    assert isinstance(sep_token, str), "Expected one separator token"
+
+    def _tokenize(batch: MultinerdBatch) -> BatchEncoding:
+        """
+        Args:
+            batch (MultinerdBatch)
+
+        Returns:
+            BatchEncoding:
+                input_ids: list[list[int]]
+                attention_mask: list[list[int]]
+                labels: list[int]
+        """
+        labels = []
+        prompts = []
+        for tokens, tags in zip(batch["tokens"], batch["ner_tags"]):
+            for token, tag in zip(tokens, tags):
+                prompt_tokens = prepare_multinerd_nertag_prompt(
+                    tokens=tokens,
+                    target_token=token,
+                    sep_token=sep_token,
+                    cls_token=cls_token,
+                )
+
+                prompts.append(prompt_tokens)
+                labels.append(tag)
+
+        tokenized = tokenizer(
+            prompts,
+            truncation=True,
+            is_split_into_words=True,
+        )
+
+        tokenized["labels"] = labels
+        return tokenized
+
+    data_tokenized = data.map(
+        _tokenize,
+        batched=True,
+        remove_columns=data.column_names,
+    )
+
+    if cache_path is not None:
+        logging.info("save tokenized multinerd to %s", cache_path)
+        os.makedirs(cache_path, exist_ok=True)
+        data_tokenized.save_to_disk(cache_path)
+
+    return data_tokenized
+
+
+def prepare_multinerd_nertag_prompt(
+    tokens: list[str],
+    target_token: str,
+    sep_token: str = "[SEP]",
+    cls_token: str = "[CLS]",
+) -> list[str]:
+    system_prompt = (
+        "Task : Determine the named entity tag . Question: What is the NER tag"
+        " of <word> in the sentence <sentence> ? Possible tags :".split()
+        + list(MULTINERD_ID2TAG.values())
+    )
+
+    return (
+        [cls_token]
+        + system_prompt
+        + [sep_token, "<word>", target_token, sep_token, "<sentence>"]
+        + tokens
+        + [sep_token]
+    )
 
 
 def _align_words_to_tags(
@@ -146,5 +272,5 @@ def _align_words_to_tags(
     return label_ids
 
 
-def _filter_en(batch: MultinerdBatch) -> list[bool]:
+def filter_multinerd_english(batch: MultinerdBatch) -> list[bool]:
     return [lang == "en" for lang in batch["lang"]]
