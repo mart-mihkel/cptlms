@@ -234,9 +234,17 @@ def tokenize_multinerd_prompted(
 def compute_multinerd_prompted_metrics(eval_pred: EvalPrediction) -> dict[str, float]:
     logits, labels = eval_pred
     preds = np.argmax(logits, axis=-1)
+
+    prec = precision_score(
+        labels,
+        preds,
+        average="macro",
+        zero_division=np.nan,  # type: ignore
+    )
+
     return {
         "accuracy": accuracy_score(labels, preds),
-        "precision": precision_score(labels, preds, average="macro"),
+        "precision": prec,
         "recall": recall_score(labels, preds, average="macro"),
         "f1": f1_score(labels, preds, average="macro"),
     }
