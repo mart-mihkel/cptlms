@@ -43,8 +43,6 @@ class PTuningBertQuestionAnswering(Module):
 
         bert_embedding = bert.get_input_embeddings()
         assert isinstance(bert_embedding, Embedding)
-
-        self.bert_embedding = bert_embedding
         self.prompt_encoder = PromptEncoder(
             token_dim=bert_embedding.embedding_dim,
             num_virtual_tokens=num_virtual_tokens,
@@ -65,9 +63,9 @@ class PTuningBertQuestionAnswering(Module):
             self.prompt_encoder().expand(batch_size, -1, -1)
         )
 
-        bert_embeds: Annotated[Tensor, "batch seq token"] = self.bert_embedding(
-            input_ids
-        )
+        bert_embedding = self.bert.get_input_embeddings()
+        assert isinstance(bert_embedding, Embedding)
+        bert_embeds: Annotated[Tensor, "batch seq token"] = bert_embedding(input_ids)
 
         virtual_attention: Annotated[Tensor, "batch virtual"] = torch.ones(
             batch_size,
@@ -125,8 +123,6 @@ class PTuningBertSequenceClassification(Module):
 
         bert_embedding = bert.get_input_embeddings()
         assert isinstance(bert_embedding, Embedding)
-
-        self.bert_embedding = bert_embedding
         self.prompt_encoder = PromptEncoder(
             token_dim=bert_embedding.embedding_dim,
             num_virtual_tokens=num_virtual_tokens,
@@ -146,9 +142,9 @@ class PTuningBertSequenceClassification(Module):
             self.prompt_encoder().expand(batch_size, -1, -1)
         )
 
-        bert_embeds: Annotated[Tensor, "batch seq token"] = self.bert_embedding(
-            input_ids
-        )
+        bert_embedding = self.bert.get_input_embeddings()
+        assert isinstance(bert_embedding, Embedding)
+        bert_embeds: Annotated[Tensor, "batch seq token"] = bert_embedding(input_ids)
 
         virtual_attention: Annotated[Tensor, "batch virtual"] = torch.ones(
             batch_size,
