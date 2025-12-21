@@ -147,10 +147,11 @@ def tokenize_multinerd(
 ) -> Dataset:
     def _tokenize(batch: MultinerdBatch) -> BatchEncoding:
         """
-        :return: BatchEncoding with data
-            input_ids: list[list[int]]
-            attention_mask: list[list[int]]
-            labels: list[list[int]]
+        Returns:
+            BatchEncoding: with data
+                input_ids: list[list[int]]
+                attention_mask: list[list[int]]
+                labels: list[list[int]]
         """
         tokenized = tokenizer(
             batch["tokens"],
@@ -177,9 +178,10 @@ def tokenize_multinerd_prompted(
     drop_other_tag_prob: float = 0.98,
 ) -> Dataset:
     """
-    :param drop_other_tag_prob: There are disproportionately more 'O' NER tags
-        in the MultiNERD dataset, drop an example with target token 'O' using
-        this probability.
+    Args:
+        drop_other_tag_prob: float, There are disproportionately more other
+            type NER tags in the MultiNERD dataset, drop examples with target
+            tag other using this probability.
     """
     sep_token = tokenizer.special_tokens_map["sep_token"]
     cls_token = tokenizer.special_tokens_map["cls_token"]
@@ -189,10 +191,11 @@ def tokenize_multinerd_prompted(
 
     def _tokenize(batch: MultinerdBatch) -> BatchEncoding:
         """
-        :return: BatchEncoding with data
-            input_ids: list[list[int]]
-            attention_mask: list[list[int]]
-            labels: list[int]
+        Returns:
+            BatchEncoding: with data
+                input_ids: list[list[int]]
+                attention_mask: list[list[int]]
+                labels: list[int]
         """
         labels = []
         prompts = []

@@ -28,7 +28,7 @@ class PTuningBertQuestionAnswering(Module):
     ) -> None:
         super().__init__()
 
-        self.num_virtual_tokens = num_virtual_tokens  # type: ignore[unresolved-attribute]
+        self.num_virtual_tokens = num_virtual_tokens  # type: ignore
 
         self.bert = bert
 
@@ -106,7 +106,7 @@ class PTuningBertSequenceClassification(Module):
     ) -> None:
         super().__init__()
 
-        self.num_virtual_tokens = num_virtual_tokens  # type: ignore[unresolved-attribute]
+        self.num_virtual_tokens = num_virtual_tokens  # type: ignore
 
         self.bert = bert
 

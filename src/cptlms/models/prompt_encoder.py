@@ -33,7 +33,7 @@ class PromptEncoder(Module):
         self.prompt_tokens = torch.arange(num_virtual_tokens)
         self.embedding = Embedding(num_virtual_tokens, token_dim)
 
-        self.reparam_type = reparam_type  # type: ignore[unresolved-attribute]
+        self.reparam_type = reparam_type  # type: ignore
         if reparam_type == "mlp":
             self.mlp_head = Sequential(
                 Linear(token_dim, hidden_size),
@@ -58,7 +58,7 @@ class PromptEncoder(Module):
                 torch.nn.Linear(hidden_size * 2, token_dim),
             )
 
-    def forward(self) -> Annotated[Tensor, "virtual token"]:
+    def forward(self) -> Annotated[Tensor, "1 virtual token"]:
         device = self.embedding.weight.device
         prompt_tokens = self.prompt_tokens.to(device)
 

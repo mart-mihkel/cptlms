@@ -105,7 +105,7 @@ def compute_metrics(
         {"id": ex["id"], "answers": ex["answers"]} for ex in examples
     ]
 
-    metrics = squad_metric.compute(  # type: ignore[missing-argument]
+    metrics = squad_metric.compute(  # type: ignore
         predictions=predicted_answers,
         references=theoretical_answers,
     )
