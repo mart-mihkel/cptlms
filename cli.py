@@ -32,6 +32,13 @@ def _save_params(out_dir: str, params: dict[str, Any]):
         json.dump(params, f)
 
 
+@app.command(help="Export tensorboard scalars to csv")
+def export_tensorboard(logdir: str = "out", outfile: str = "tb.csv"):
+    from icftner.scripts.export_tensorboard import main
+
+    main(logdir=logdir, outfile=outfile)
+
+
 @app.command(
     help="Fine tune a pretrained bert model for question answering on SQuAD dataset"
 )

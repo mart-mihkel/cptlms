@@ -6,6 +6,9 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "transformers>=4.57.1",
+    "tensorboard>=2.20.0",
+    "scikit-learn>=1.8.0",
+    "accelerate>=1.12.0",
     "datasets>=4.3.0",
     "evaluate>=0.4.6",
     "ipython>=9.6.0",
@@ -14,15 +17,13 @@ dependencies = [
     "torch>=2.9.0",
     "peft>=0.17.1",
     "typer>=0.20.0",
-    "accelerate>=1.12.0",
-    "scikit-learn>=1.8.0",
 ]
 
 [dependency-groups]
 dev = [
     "marimo>=0.18.4",
+    "plotnine>=0.15.2",
     "pytest>=9.0.1",
     "ruff>=0.14.2",
-    "tensorboard>=2.20.0",
     "ty>=0.0.1a25",
 ]
